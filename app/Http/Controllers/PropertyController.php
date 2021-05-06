@@ -2,11 +2,23 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Property;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 
 class PropertyController extends Controller
 {
+    private $allowedKeys = [
+        'name'=>'',
+        'price'=>'',
+        'bedrooms'=>'',
+        'bathrooms'=>'',
+        'storeys'=>'',
+        'garages'=>''
+    ];
+
     public function requestAction(Request $request)
     {
 //        $data = [
@@ -18,18 +30,27 @@ class PropertyController extends Controller
 //            'garages'=>'2'
 //        ];
 //
-//        return json_encode($data);
         $data = json_decode($request->getContent(), true);
-        $errorMessage = ['error'=>'no JSON format'];
+        $errorMessage = 'no JSON format or empty request';
+        $incorrectKeys = array_diff_key($this->allowedKeys, $data);
 
         if (empty($data)) {
-            return new JsonResponse($errorMessage);
+            return new JsonResponse(['error'=>$errorMessage]);
         }
 
-//        $data
+        $correctKeys = array_intersect_key($data, $this->allowedKeys);
 
-//        $output = $data;
 
-        return new JsonResponse($data);
+
+
+        return $correctKeys;
+//        return new JsonResponse($data);
+    }
+
+    public function testDatabase()
+    {
+//        return DB::table('property')->get();
+        return Property::where('name', 'The Victoria')
+            ->get();
     }
 }

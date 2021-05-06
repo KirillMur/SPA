@@ -19,3 +19,5 @@ Route::get('/', function () {
 });
 Route::get('/t', [PropertyController::class, 'requestAction'])
 ->name('t');
+Route::get('/n', [PropertyController::class, 'testDatabase'])
+    ->name('n');
