@@ -18,6 +18,4 @@ Route::get('/', function () {
     return view('welcome');
 });
 Route::get('/t', [PropertyController::class, 'requestAction'])
-->name('t');
-Route::get('/n', [PropertyController::class, 'testDatabase'])
-    ->name('n');
+    ->name('t');

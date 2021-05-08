@@ -5,52 +5,55 @@ namespace App\Http\Controllers;
 use App\Models\Property;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 
 class PropertyController extends Controller
 {
-    private $allowedKeys = [
-        'name'=>'',
-        'price'=>'',
-        'bedrooms'=>'',
-        'bathrooms'=>'',
-        'storeys'=>'',
-        'garages'=>''
-    ];
+    private $allowedKeys;
+    private $notJsonMsg = ['error'=>'no JSON format or empty request'];
+    private $incorrectFieldsMsg = 'error, incorrect fields name(s)';
+    private $notFoundMsg = ['result'=>'not found'];
 
     public function requestAction(Request $request)
     {
-//        $data = [
-//            'name'=>'The Victoria',
-//            'price'=>'100500',
-//            'bedrooms'=>'4',
-//            'bathrooms'=>'2',
-//            'storeys'=>'2',
-//            'garages'=>'2'
-//        ];
-//
         $data = json_decode($request->getContent(), true);
-        $errorMessage = 'no JSON format or empty request';
-        $incorrectKeys = array_diff_key($this->allowedKeys, $data);
+        $incorrectKeys = array_diff_key($data, $this->allowedKeys); //для вывода названий некорректных полей
 
-        if (empty($data)) {
-            return new JsonResponse(['error'=>$errorMessage]);
+        if(empty($data)) {
+            return new JsonResponse($this->notJsonMsg);
+        }
+        if(!empty($incorrectKeys)) {
+            return new JsonResponse([$this->incorrectFieldsMsg => $incorrectKeys]);
         }
 
         $correctKeys = array_intersect_key($data, $this->allowedKeys);
 
-
-
-
-        return $correctKeys;
-//        return new JsonResponse($data);
+        return new JsonResponse($this->findEachField($correctKeys) + $this->findTogether($correctKeys));
     }
 
-    public function testDatabase()
+    protected function findEachField(array $data) : array
     {
-//        return DB::table('property')->get();
-        return Property::where('name', 'The Victoria')
-            ->get();
+        $result = [];
+        foreach($data as $key=> $value)
+        {
+            $find = Property::finder($key, $value)->toArray();
+            $x["By $key"] = !empty($find) ? array_merge($find) : $this->notFoundMsg;
+            $result += $x;
+        }
+
+        return $result;
+    }
+
+    protected function findTogether(array $data)
+    {
+        $find = Property::findByArrayOfFields($data)->toArray();
+        $result = !empty($find) ? $find : $this->notFoundMsg;
+
+        return ['search_all'=>$result];
+    }
+
+    public function __construct()
+    {
+        $this->allowedKeys = Property::loadColumnNames();
     }
 }
