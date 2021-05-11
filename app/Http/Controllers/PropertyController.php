@@ -6,6 +6,7 @@ use App\Models\Property;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\Response;
 
 class PropertyController extends Controller
 {
@@ -17,11 +18,13 @@ class PropertyController extends Controller
     public function requestAction(Request $request)
     {
         $data = json_decode($request->getContent(), true);
-        $incorrectKeys = array_diff_key($data, $this->allowedKeys); //для вывода названий некорректных полей
 
         if(empty($data)) {
             return new JsonResponse($this->notJsonMsg);
         }
+
+        $incorrectKeys = array_diff_key($data, $this->allowedKeys); //для вывода названий некорректных полей
+
         if(!empty($incorrectKeys)) {
             return new JsonResponse([$this->incorrectFieldsMsg => $incorrectKeys]);
         }
@@ -31,7 +34,7 @@ class PropertyController extends Controller
         return new JsonResponse($this->findEachField($correctKeys) + $this->findTogether($correctKeys));
     }
 
-    protected function findEachField(array $data) : array
+    private function findEachField(array $data) : array
     {
         $result = [];
         foreach($data as $key=> $value)
@@ -44,12 +47,12 @@ class PropertyController extends Controller
         return $result;
     }
 
-    protected function findTogether(array $data)
+    private function findTogether(array $data)
     {
         $find = Property::findByArrayOfFields($data)->toArray();
         $result = !empty($find) ? $find : $this->notFoundMsg;
 
-        return ['search_all'=>$result];
+        return ['search with all parameters'=>$result];
     }
 
     public function __construct()
