@@ -19,19 +19,6 @@ function collectData(tagname)
     return JSON.stringify(array);
 }
 
-function validate(target)
-{
-    for(i = 0; arrayLength = target.length, i < arrayLength; i++) {
-        if (target[i].name === 'name') {
-            let re = /^[\w ]+$/;
-            console.log(re.test(target[i].value));
-        } else {
-            let re = /^[\d]+$/;
-            console.log(re.test(target[i].value));
-        }
-    }
-}
-
 function showResult(response)
 {
     if(document.getElementById('resultTable')){document.getElementById('resultTable').remove()}
@@ -40,11 +27,11 @@ function showResult(response)
     result.style.textAlign = 'left';
 
     for (const [key, value] of Object.entries(response)) {
-        result.innerHTML += '<tr><th>' + key + ':' + '</th></tr>';
+        result.innerHTML += '<tr><th class="orange">' + key + ':' + '</th></tr>';
 
         if(value.length){
             for (let [keyy, valuee] of Object.entries(value)) {
-                result.innerHTML += '<tr><th>' + 'Object name - ' + valuee['name'] + '</th></tr>';
+                result.innerHTML += '<tr><th>' + 'Object: ' + valuee['name'] + '</th></tr>';
 
                 buildRowByObject(valuee, result);
             }
@@ -60,8 +47,8 @@ function showResult(response)
 function buildRowByObject(value, element)
 {
     for (let [key, valuee] of Object.entries(value)) {
-        if(key === 'id' || key === 'name') continue;
-        element.innerHTML += '<tr><td>' + key + '</td><td>' + valuee + '</td></tr>';
+        if(key === 'name') continue;
+        element.innerHTML += '<tr><td>' + key + ':</td><td>' + valuee + '</td></tr>';
     }
 }
 
