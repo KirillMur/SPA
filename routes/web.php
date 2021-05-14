@@ -14,9 +14,9 @@ use App\Http\Controllers\PropertyController;
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
-});
+//Route::get('/', function () {
+//    return view('welcome');
+//});
 Route::post('/api/find', [PropertyController::class, 'requestAction'])
     ->name('find');
 Route::get('/search', function () {
