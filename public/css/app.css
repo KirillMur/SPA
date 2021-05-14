@@ -4,7 +4,17 @@ BODY
     color: #e2e8f0;
 }
 
+INPUT
+{
+    background-color: #e2e8f0;
+}
+
 .orange
 {
     color:darkorange;
+}
+
+BUTTON
+{
+    height: 20px;
 }

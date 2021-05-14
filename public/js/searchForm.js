@@ -1,5 +1,6 @@
 
 document.getElementById('btn').addEventListener('click', function () {
+    removeElement('resultTable');
     let data = collectData('input');
     send(data);
 });
@@ -21,7 +22,7 @@ function collectData(tagname)
 
 function showResult(response)
 {
-    if(document.getElementById('resultTable')){document.getElementById('resultTable').remove()}
+    removeElement('resultTable');
     let result = document.createElement('table');
     result.id = 'resultTable';
     result.style.textAlign = 'left';
@@ -52,16 +53,40 @@ function buildRowByObject(value, element)
     }
 }
 
+function spinner(remove = false)
+{
+    console.log(remove);
+    let spinner = document.getElementsByClassName('spinner')[0];
+
+    if(remove){
+        console.log('spinner && remove');
+        setTimeout(function(){spinner.style.display = 'none'}, 500);
+    } else {
+        console.log('visible');
+        spinner.style.display = 'inline-block';
+    }
+}
+
+function removeElement(element)
+{
+    if(document.getElementById(element))
+        document.getElementById(element).remove()
+}
+
 function send(data)
 {
+    spinner();
     var request = new XMLHttpRequest();
     request.open('POST', '/api/find', true);
     request.setRequestHeader('Content-Type', 'application/json');
     request.responseType = 'json';
     request.onreadystatechange = function (aEvt) {
+        console.log(request.readyState);
         if (request.readyState === 4) {
             if(request.status === 200) {
-                showResult(request.response);
+                setTimeout(function(){
+                    showResult(request.response);
+                    spinner(true);}, 500);
             }
             else {
                 console.log(request.status);
