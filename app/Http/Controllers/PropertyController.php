@@ -19,7 +19,7 @@ class PropertyController extends Controller
     //обработчик запроса
     public function requestAction(Request $request)
     {
-        //проверяет входящие даввные - ключи и значения
+        //проверяет входящие данные - ключи и значения
         $data = $this->requestValidator($request);
         if(!empty($data['error'])) return new JsonResponse(['Error'=>$data['error']], 400);
 

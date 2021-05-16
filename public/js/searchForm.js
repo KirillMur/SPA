@@ -83,7 +83,7 @@ function send(data)
     request.onreadystatechange = function (aEvt) {
         console.log(request.readyState);
         if (request.readyState === 4) {
-            if(request.status === 200) {
+            if(request.status === 200 || 400) {
                 setTimeout(function(){
                     showResult(request.response);
                     spinner(true);}, 500);

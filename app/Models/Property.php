@@ -80,8 +80,8 @@ class Property extends Model
 
             if($result['price']) {
                 unset($result['price']);
-                $result += ['price_min'=>''];
-                $result += ['price_max'=>''];
+                $result['price_min'] = '';
+                $result['price_max'] = '';
         }
 
         return $result;
