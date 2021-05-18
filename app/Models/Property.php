@@ -32,20 +32,13 @@ class Property extends Model
     }
 
     //ищет по пассиву значений; для значений 'price_min' и 'price_max' отдельно производится поиск в колонке 'price'
-    //по диапазону (в одном запросе)
+    //по диапазону (в одном запросе), имя при этом ищется по нестрогому соответствию
     public static function findByArrayOfFields(array $data) : object
     {
         return self::where($data['main'])
+            ->where('name', 'like', '%' . $data['name']['name'] . '%')
             ->whereBetween('price', [$data['price']['price_min'], $data['price']['price_max']])
             ->get();
-    }
-
-    //ищет значение поля $key по нестрогому соответствию
-    public static function findContains(string $key, string $value, string $field) : object
-    {
-        return self::where("$key", 'like', "%$value%")
-            ->groupBy($field)
-            ->get($field);
     }
 
     //получение дефолтного значения для поиска (вызывается в случае отсутствующего входящего значения 'price_max')

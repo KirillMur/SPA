@@ -41,7 +41,7 @@ class PropertyController extends Controller
         $incorrectKeys = array_diff_key($data, $this->allowedKeys);
         if (!empty($incorrectKeys)) return ['error'=>[$this->incorrectFieldsMsg=>array_keys($incorrectKeys)]];
 
-        //обрезает пробелы в каждом значении
+        //удвляет пробелы в каждом значении
         array_walk($data, function(&$value){
             return $value = trim($value);
         });
@@ -55,10 +55,11 @@ class PropertyController extends Controller
     }
 
     //добавляет поля price_min и price_max при их отсутствии на входе
-    private function preparePriceValues($data)
+    private function preparePriceValues($data) : array
     {
         $data['price_min'] = isset($data['price_min']) ? (int) $data['price_min'] : false;
         $data['price_max'] = isset($data['price_max']) ? (int) $data['price_max'] : Property::getMaxPrice();
+
         return $data;
     }
 
@@ -84,44 +85,29 @@ class PropertyController extends Controller
         return $result;
     }
 
-    //поиск по всем входным данным одновременно
+    //поиск по всем входным данным одновременно: по диапазону значений цены, по нестрогому соответствию имени и
+    //строгому соответствию остальных данных
     private function findTogether(array $data) : array
     {
-        //готовим значения для поиска по диапазону цены и остальным фиксировнным данным одним запросом
+        //готовим данные для поиска одновременно по всем полям
         $data = $this->arrayDivideMainPrice($data);
 
-        //опеделяем количество нестрогих совпадений имени в таблице, а также готовим их для поиска по всем вариантам
-        $nameFields = Property::findContains('name', $data['main']['name'], 'name')->toArray();
-        if (empty($nameFields)) return ['Search with all parameters' => $this->notFoundMsg];
-
-        $result = [];
-        $i = 0;
-        foreach ($nameFields as $key => $item) {
-            $data['main']['name'] = $item['name'];
-            $find = Property::findByArrayOfFields($data)->toArray();
-            if (empty($find)) continue;
-
-            while ($find) {
-                $result[$i] = array_shift($find);
-                $i++;
-            }
-
-        }
-
+        $result = Property::findByArrayOfFields($data)->toArray();
         $result = $this->unsetIdField($result);
-
         $result = !empty($result) ? $result : $this->notFoundMsg;
 
         return ['Search with all parameters' => $result];
     }
 
-    //разбиваем данные на 2 подмассива: 'price' - как данные для поиска по интервалу значений и 'main' - остальные
+    //разбиваем данные на 3 подмассива: 'price' - как данные для поиска по интервалу значений,
+    //'name' для поиска нестрогого соответствия и 'main' - остальные
     private function arrayDivideMainPrice(array $data) : array
     {
         $price['price'] = ['price_min' => $data['price_min'], 'price_max' => $data['price_max']];
-        $main['main'] = array_diff_assoc($data, $price['price']);
+        $name['name'] = ['name' => $data['name']];
+        $main['main'] = array_diff_assoc($data, $price['price'], $name['name']);
 
-        return array_merge($main, $price);
+        return array_merge($name, $main, $price);
     }
 
     //валидация полей, отдельно для поля "name". Возвращает null если проверки пройдены,

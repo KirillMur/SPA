@@ -1,62 +1,46 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400"></a></p>
+Приложение реализовано согласно ТЗ в виде API, который принимает и возвращает результат в JSON формате (по сути SPA).
 
-<p align="center">
-<a href="https://travis-ci.org/laravel/framework"><img src="https://travis-ci.org/laravel/framework.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Приложение принимает POST-запрос по адресу /api/find, frontend-часть же взаимодействует с API по адресу /search.
 
-## About Laravel
+Запрос к API обрабатывает контроллер PropertyController, первым делом который проверяет входные данные на валидность:
+- является ли формат запроса верным (если нет, то считается пустым);
+- совпадают ли имена колонок с корректными (их список, за исключением поля 'id', формируется методом loadColumnNames 
+в модели Property);
+- обрезает пробелы принятых значений;
+- проводит валидацию формата данных (слова и цифры для поля 'name', цифровой для остальных);
+- подготавливает (добавляет) ключи для поиска по интервалу знчений по полю 'price'.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+После этого вызываются 2 метода, которые возвращают итоговый результат поиска. Один из них ищет по каждому ключу/полю
+отдельно, второй - с учетом всех существующих вместе.
+Из итогового результата убирается поле 'id' как нерелевантное. Также это поле недопустимо в запросе.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Поиск всех данных производится по строгому соответствию, кроме поля 'name'. Все поля необязательные.
+Поиск значения 'price' производится с помощью диапазона значений 'price_min' и 'price_max'. Если же один или оба
+параметра на входе отсутствуют, подставляется для 'price_min' значение false (булево значение используется для пропуска
+интерации поиска индивидуально по каждому полю для предотвращения дублирования записи в результате поиска), для 
+'price_max' выбирается максимальное значение цены из таблицы и используется как параметр по-умолчанию. Таким образом
+мы не зависим от наличия этих параметров на входе и ищем по максимальному диапазону при отсутствии обоих, так и с
+ограничением только по нижнему или верхнему значению.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Поиск производится только по существующим (то есть не пустым) входным полям (ключам с не пустыми значениями).
 
-## Learning Laravel
+Обработка ошибок.
+Обрабатываются следующие ошибки:
+- проверяется входной формат, если он не JSON или запрос пуст, вернет ошибку "unsupported format" и 
+сообщение "no JSON format or empty request";
+- пробелы в начале и в конце обрезаются автоматически;
+- неверное название поля (имя ключа) входных данных выводится с ошибкой "incorrect field name(s)" с 
+указанием этого поля/полей;
+- неверный формат данных (например, буквы для числовых полей или спец-символы в поле имени) возвращает ошибку
+"type error" с указанием пол и его значения ("restricted symbol ';' in field 'field'"), для цифровых полей дополнительно
+указывается подсказка, что принимаются только целочисленных значения.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+Ошибки запроса выводятся с кодом 400, если ошибка иного характера (соединение, ошибка сервера и пр.), 
+выведется сообщение с его кодом. 
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 1500 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Особенности:
+- в коде AJAX скрипта установлен таймаут вывода результатов для более наглядного предсталения работы спиннера. 
+- на время поиска блокируется кнопка поиска и текст предыдущего запроса меняет цвет на серый.
 
-## Laravel Sponsors
-
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell).
-
-### Premium Partners
-
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Cubet Techno Labs](https://cubettech.com)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[Many](https://www.many.co.uk)**
-- **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
-- **[DevSquad](https://devsquad.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[OP.GG](https://op.gg)**
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Для создания и тестирования использовался фреймворк Laravel 8, встроенный веб-сервер, PHP версии 7.3 и БД MySQL.
+Фронтенд часть написана на чистом JavaScript.
