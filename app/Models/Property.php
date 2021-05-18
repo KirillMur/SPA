@@ -15,7 +15,7 @@ class Property extends Model
     {
         $operator = "=";
 
-        if(!$strict){
+        if (!$strict){
             $value = "%$value%";
             $operator = "like";
         }
@@ -35,19 +35,16 @@ class Property extends Model
     //по диапазону (в одном запросе)
     public static function findByArrayOfFields(array $data) : object
     {
-        $data = self::findStringByPattern($data, 'name');
-        $whereData = $data;
-        unset($whereData['price_min'], $whereData['price_max']);
-
-        return self::where($whereData)
-            ->whereBetween('price', [$data['price_min'], $data['price_max']])
+        return self::where($data['main'])
+            ->whereBetween('price', [$data['price']['price_min'], $data['price']['price_max']])
             ->get();
     }
 
     //ищет значение поля $key по нестрогому соответствию
-    public static function findContains(string $key, string $value, string $field = null) : object
+    public static function findContains(string $key, string $value, string $field) : object
     {
         return self::where("$key", 'like', "%$value%")
+            ->groupBy($field)
             ->get($field);
     }
 
@@ -55,19 +52,6 @@ class Property extends Model
     public static function getMaxPrice() : int
     {
         return self::max('price');
-    }
-
-    //заменяет значение поля $key в массиве на значение, найденное по нестрогому соответствию
-    private static function findStringByPattern(array $data, string $key) : array
-    {
-        if(isset($data[$key])){
-            $nameFieldObj = self::findContains($key, $data[$key], 'name')
-                ->toArray();
-
-            $nameField = array_shift($nameFieldObj);
-            !isset($nameField[$key]) ?: $data[$key] = $nameField[$key]; //если не найдено, оставляем без изменений
-        }
-        return $data;
     }
 
     //подготавливает поля для сравнения корректности входных данных
@@ -78,7 +62,7 @@ class Property extends Model
             ->keys()
             ->toArray());
 
-            if($result['price']) {
+            if ($result['price']) {
                 unset($result['price']);
                 $result['price_min'] = '';
                 $result['price_max'] = '';

@@ -7,7 +7,7 @@
     <p><input type="text" name="price_min" id="pr"><label for="pr"> ..by price from</label></p>
     <p><input type="text" name="price_max" id="pr"><label for="pr"> ..by price to</label></p>
     <button id="btn">Go!</button>
-    <div class="spinner" style="display: none">
+    <div id ='spinner' style="display: none">
         <div class="bounce1"></div>
         <div class="bounce2"></div>
         <div class="bounce3"></div>

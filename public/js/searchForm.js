@@ -1,10 +1,11 @@
 
 document.getElementById('btn').addEventListener('click', function () {
-    removeElement('resultTable');
+    fadeElement('resultTable');
     let data = collectData('input');
     send(data);
 });
 
+//собираем данные с полей в массив
 function collectData(tagname)
 {
     var array = {};
@@ -20,6 +21,7 @@ function collectData(tagname)
     return JSON.stringify(array);
 }
 
+//вывод ответа
 function showResult(response)
 {
     removeElement('resultTable');
@@ -28,7 +30,7 @@ function showResult(response)
     result.style.textAlign = 'left';
 
     for (const [key, value] of Object.entries(response)) {
-        result.innerHTML += '<tr><th class="orange">' + key + ':' + '</th></tr>';
+        result.innerHTML += '<tr><th class="orange">' + key + ':</th></tr>';
 
         if(value.length){
             for (let [keyy, valuee] of Object.entries(value)) {
@@ -45,6 +47,7 @@ function showResult(response)
     document.getElementById('mainDiv').appendChild(result)
 }
 
+//создает строки внутри таблицы
 function buildRowByObject(value, element)
 {
     for (let [key, valuee] of Object.entries(value)) {
@@ -53,43 +56,76 @@ function buildRowByObject(value, element)
     }
 }
 
+//индикатор выполнения
 function spinner(remove = false)
 {
-    console.log(remove);
-    let spinner = document.getElementsByClassName('spinner')[0];
+    let spinner = document.getElementById('spinner');
 
     if(remove){
-        console.log('spinner && remove');
-        setTimeout(function(){spinner.style.display = 'none'}, 500);
+        spinner.style.display = 'none';
     } else {
-        console.log('visible');
         spinner.style.display = 'inline-block';
     }
 }
 
-function removeElement(element)
+function removeElement(elementId)
 {
-    if(document.getElementById(element))
-        document.getElementById(element).remove()
+    if(document.getElementById(elementId))
+        document.getElementById(elementId).remove()
+}
+
+function fadeElement(elementId)
+{
+    if(document.getElementById(elementId)) {
+        document.getElementById(elementId).style.color = 'gray';
+        let target = document.getElementsByTagName('th');
+
+        for(i = 0; arrayLength = target.length, i < arrayLength; i++){
+            target[i].style.color = 'gray';
+        }
+    }
+}
+
+//для вывода сообщения в случае ошибки соединения
+function errorMsg(msg)
+{
+    if (document.getElementById('errorMsg'))
+        document.getElementById('errorMsg').remove();
+
+    let span = document.createElement('span');
+    span.id = 'errorMsg';
+    span.style.marginLeft = '10px';
+    span.style.color = 'orangered';
+    span.style.fontWeight = 'bold';
+    span.innerText = msg;
+    document.getElementById('spinner').after(span);
+}
+
+function elementDisable(elementId, disable = true)
+{
+    document.getElementById(elementId).disabled = disable;
 }
 
 function send(data)
 {
     spinner();
+    elementDisable('btn');
     var request = new XMLHttpRequest();
     request.open('POST', '/api/find', true);
     request.setRequestHeader('Content-Type', 'application/json');
     request.responseType = 'json';
     request.onreadystatechange = function (aEvt) {
-        console.log(request.readyState);
         if (request.readyState === 4) {
-            if(request.status === 200 || 400) {
+            if(request.status === 200 || request.status === 400) {
+                console.log(request.response);
+
                 setTimeout(function(){
                     showResult(request.response);
-                    spinner(true);}, 500);
+                    elementDisable('btn', false);
+                    spinner(true);}, 500); //эмуляция времени поиска
             }
             else {
-                console.log(request.status);
+                errorMsg('Connection error (status code: ' + request.status + ')');
             }
         }
     };

@@ -12,21 +12,20 @@ use Symfony\Component\HttpFoundation\Response;
 class PropertyController extends Controller
 {
     private $allowedKeys;
-    private $notJsonMsg = ['unsupported format'=>'no JSON format or empty request'];
+    private $notJsonMsg = ['unsupported format' => 'no JSON format or empty request'];
     private $incorrectFieldsMsg = 'incorrect field name(s)';
-    private $notFoundMsg = ['result'=>'not found'];
+    private $notFoundMsg = ['result' => 'not found'];
 
     //обработчик запроса
     public function requestAction(Request $request)
     {
         //проверяет входящие данные - ключи и значения
         $data = $this->requestValidator($request);
-        if(!empty($data['error'])) return new JsonResponse(['Error'=>$data['error']], 400);
+        if (isset($data['error'])) return new JsonResponse(['Error'=>$data['error']], 400);
 
         //подготавливает значения для Property::findRange(), приводим к числовому виду
         //и формируем базовые значния в случае отсутствия на входе
-        $data['price_min'] = isset($data['price_min']) ? (int) $data['price_min'] : false;
-        $data['price_max'] = isset($data['price_max']) ? (int) $data['price_max'] : Property::getMaxPrice();
+        $data = $this->preparePriceValues($data);
 
         //если все проврки пройдены, ищет и выводит результаты
         return new JsonResponse($this->findTogether($data) + $this->findEachField($data));
@@ -36,11 +35,11 @@ class PropertyController extends Controller
     {
         //преобразовывает вводные данные в php-массив и проверяет является ли данные соответствующими формату JSON
         $data = json_decode($request->getContent(), true);
-        if(empty($data)) return $data = ['error'=>$this->notJsonMsg];
+        if (empty($data)) return ['error'=>$this->notJsonMsg];
 
         //сравнивает имена ключей вводных данных с верными
         $incorrectKeys = array_diff_key($data, $this->allowedKeys);
-        if(!empty($incorrectKeys)) return $data = ['error'=>[$this->incorrectFieldsMsg=>array_keys($incorrectKeys)]];
+        if (!empty($incorrectKeys)) return ['error'=>[$this->incorrectFieldsMsg=>array_keys($incorrectKeys)]];
 
         //обрезает пробелы в каждом значении
         array_walk($data, function(&$value){
@@ -50,8 +49,16 @@ class PropertyController extends Controller
         //проводит валидацию значений полей в соответствии формату (для "name" алфавитно-цифровые
         //и цифровые целочисленные для остальных)
         $notValid = $this->validateInput($data);
-        if($notValid) return $data = ['error'=>['type error'=>$notValid]];
+        if ($notValid) return ['error'=>['type error'=>$notValid]];
 
+        return $data;
+    }
+
+    //добавляет поля price_min и price_max при их отсутствии на входе
+    private function preparePriceValues($data)
+    {
+        $data['price_min'] = isset($data['price_min']) ? (int) $data['price_min'] : false;
+        $data['price_max'] = isset($data['price_max']) ? (int) $data['price_max'] : Property::getMaxPrice();
         return $data;
     }
 
@@ -60,9 +67,8 @@ class PropertyController extends Controller
     {
         $result = [];
 
-        foreach($data as $key=> $value)
-        {
-            switch($key){
+        foreach ($data as $key => $value) {
+            switch($key) {
                 case 'name': $find = Property::findField($key, $value, false)->toArray(); break;
                 case 'price_min' && $value === false: continue 2;
                 case 'price_min': $find = Property::findRange($data['price_min'], $data['price_max'], 'price'); break;
@@ -81,11 +87,41 @@ class PropertyController extends Controller
     //поиск по всем входным данным одновременно
     private function findTogether(array $data) : array
     {
-        $find = Property::findByArrayOfFields($data)->toArray();
-        $find = $this->unsetIdField($find);
-        $result = !empty($find) ? $find : $this->notFoundMsg;
+        //готовим значения для поиска по диапазону цены и остальным фиксировнным данным одним запросом
+        $data = $this->arrayDivideMainPrice($data);
 
-        return ['Search with all parameters'=>$result];
+        //опеделяем количество нестрогих совпадений имени в таблице, а также готовим их для поиска по всем вариантам
+        $nameFields = Property::findContains('name', $data['main']['name'], 'name')->toArray();
+        if (empty($nameFields)) return ['Search with all parameters' => $this->notFoundMsg];
+
+        $result = [];
+        $i = 0;
+        foreach ($nameFields as $key => $item) {
+            $data['main']['name'] = $item['name'];
+            $find = Property::findByArrayOfFields($data)->toArray();
+            if (empty($find)) continue;
+
+            while ($find) {
+                $result[$i] = array_shift($find);
+                $i++;
+            }
+
+        }
+
+        $result = $this->unsetIdField($result);
+
+        $result = !empty($result) ? $result : $this->notFoundMsg;
+
+        return ['Search with all parameters' => $result];
+    }
+
+    //разбиваем данные на 2 подмассива: 'price' - как данные для поиска по интервалу значений и 'main' - остальные
+    private function arrayDivideMainPrice(array $data) : array
+    {
+        $price['price'] = ['price_min' => $data['price_min'], 'price_max' => $data['price_max']];
+        $main['main'] = array_diff_assoc($data, $price['price']);
+
+        return array_merge($main, $price);
     }
 
     //валидация полей, отдельно для поля "name". Возвращает null если проверки пройдены,
@@ -109,7 +145,7 @@ class PropertyController extends Controller
     private function unsetIdField(array $data) : array
     {
         foreach ($data as &$item) {
-            if($item['id'])
+            if ($item['id'])
                 unset($item['id']);
         }
 
